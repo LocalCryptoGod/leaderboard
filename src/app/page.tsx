@@ -3,49 +3,18 @@ import styles from "./page.module.css";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen flex flex-col items-center justify-start bg-[#111827] py-12 px-2">
+      <div className="max-w-4xl w-full mx-auto bg-[#1f2937] rounded-2xl shadow-2xl p-10 flex flex-col items-center border border-gray-700">
+        <h1 className="text-4xl font-extrabold mb-10 text-center text-gray-100 tracking-tight drop-shadow-lg">
+          Lazy Lions Leaderboards
+        </h1>
+        <div className="flex justify-center mb-12 space-x-4 text-center">
+          {/* ...tabs... */}
         </div>
-      </main>
+        <div className="flex flex-col items-center w-full">
+          {/* ...table and pagination... */}
+        </div>
+      </div>
       <footer className={styles.footer}>
         <a
           href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
