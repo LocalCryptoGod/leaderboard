@@ -61,26 +61,16 @@ export default function LeaderboardTable({ entries, loading, startRank = 1, ensN
                 <tr key={entry.address + '-' + idx} className="border-t border-b-2 border-gray-800 hover:bg-[#23272e] transition-all align-middle">
                   <td className="px-2 py-1 font-semibold text-center">{startRank + idx}</td>
                   <td className="px-2 py-1 font-mono break-all text-center">
-                    {ensNames && ensNames[entry.address] ? (
-                      <span className="font-semibold text-blue-300">
-                        {ensNames[entry.address]} - 
-                        <span
-                          className="ml-1 cursor-pointer hover:underline"
-                          title={entry.address}
-                          onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(entry.address); }}
-                        >
-                          {`0x...${entry.address.slice(-5)}`}
-                        </span>
-                      </span>
-                    ) : (
-                      <span
-                        className="cursor-pointer hover:underline"
-                        title={entry.address}
-                        onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(entry.address); }}
-                      >
-                        {entry.address}
-                      </span>
-                    )}
+                    <span
+                      className={ensNames && ensNames[entry.address] ? "font-semibold text-blue-300" : ""}
+                      title={entry.address}
+                      onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(entry.address); }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {ensNames && ensNames[entry.address]
+                        ? `${ensNames[entry.address]}`
+                        : `0x...${entry.address.slice(-5)}`}
+                    </span>
                     {entry.address.toLowerCase() === LP_ADDRESS && (
                       <span className="ml-2 px-2 py-1 bg-yellow-300 text-black text-xs rounded">LP Pool</span>
                     )}

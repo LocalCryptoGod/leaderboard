@@ -27,7 +27,7 @@ const ALCHEMY_BASE_URL = `https://eth-mainnet.g.alchemy.com/nft/v2/${ALCHEMY_API
 
 console.log("Alchemy Key:", ALCHEMY_API_KEY)
 
-async function fetchLazyLionsTopHolders(limit = 20) {
+async function fetchLazyLionsTopHolders(limit = 250) {
   // Alchemy does not provide a direct "top holders" endpoint, so we fetch all owners and count
   const res = await fetch(
     `${ALCHEMY_BASE_URL}/getOwnersForCollection?contractAddress=${LAZY_LIONS_CONTRACT}&withTokenBalances=true`
@@ -44,7 +44,7 @@ async function fetchLazyLionsTopHolders(limit = 20) {
   return counts.slice(0, limit);
 }
 
-async function fetchLazyCubsTopHolders(limit = 20) {
+async function fetchLazyCubsTopHolders(limit = 250) {
   const res = await fetch(
     `${ALCHEMY_BASE_URL}/getOwnersForCollection?contractAddress=${LAZY_CUBS_CONTRACT}&withTokenBalances=true`
   );
@@ -79,14 +79,13 @@ export default function LeaderboardPage() {
   const TOKEN_PAGE_SIZE = 50;
   const [sortKey, setSortKey] = useState<'count' | 'locked' | 'total'>('total');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [tokenTotalCount, setTokenTotalCount] = useState(0);
   const prevTab = useRef(activeTab);
 
   useEffect(() => {
     if (activeTab === "lions") {
       setLoading(true);
       setError("");
-      fetchLazyLionsTopHolders(500)
+      fetchLazyLionsTopHolders(250)
         .then(setLions)
         .catch((e) => setError(e.message))
         .finally(() => setLoading(false));
@@ -94,7 +93,7 @@ export default function LeaderboardPage() {
     } else if (activeTab === "cubs") {
       setCubsLoading(true);
       setCubsError("");
-      fetchLazyCubsTopHolders(500)
+      fetchLazyCubsTopHolders(250)
         .then(setCubs)
         .catch((e) => setCubsError(e.message))
         .finally(() => setCubsLoading(false));
@@ -106,7 +105,6 @@ export default function LeaderboardPage() {
         .then(async (lockedMap) => {
           const allHolders = await fetchFirstNPagesSequentially(10, TOKEN_PAGE_SIZE, lockedMap);
           setFullTokenHolders(allHolders);
-          setTokenTotalCount(allHolders.length);
         })
         .catch((e) => setTokenError(e.message))
         .finally(() => setTokenLoading(false));
@@ -121,108 +119,110 @@ export default function LeaderboardPage() {
     prevTab.current = activeTab;
   }, [activeTab]);
 
-  // ENS name resolution for visible addresses
+  // ENS name resolution for visible addresses (Lions)
   useEffect(() => {
     const addresses = lions.map((entry) => entry.address);
-    const missing = addresses.filter((addr) => ensNames[addr] === undefined);
-    if (missing.length === 0) return;
+    if (addresses.length === 0) return;
     let cancelled = false;
     (async () => {
-      const updates: Record<string, string | null> = {};
-      for (const addr of missing) {
-        if (cancelled) break;
-        try {
-          const res = await fetch(`/api/ens-lookup?address=${addr}`);
-          const data = await res.json();
-          updates[addr] = data.ensName || null;
-          await new Promise(res => setTimeout(res, 100)); // Short delay, Redis is fast
-        } catch {
-          updates[addr] = null;
-        }
+      try {
+        const res = await fetch('/api/ens-lookup-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses }),
+        });
+        const data = await res.json();
+        if (!cancelled && data.ensNames) setEnsNames(data.ensNames);
+      } catch {
+        // Optionally handle error
       }
-      if (!cancelled) setEnsNames((prev) => ({ ...prev, ...updates }));
     })();
     return () => { cancelled = true; };
   }, [lions]);
 
-  const totalPages = Math.ceil(lions.length / PAGE_SIZE);
-  const paginatedLions = lions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // ENS name resolution for visible addresses
+  // ENS name resolution for visible addresses (paginated Lions)
   useEffect(() => {
-    const addresses = paginatedLions.map((entry) => entry.address);
-    const missing = addresses.filter((addr) => ensNames[addr] === undefined);
-    if (missing.length === 0) return;
+    const addresses = lions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((entry) => entry.address);
+    if (addresses.length === 0) return;
     let cancelled = false;
     (async () => {
-      const updates: Record<string, string | null> = {};
-      for (const addr of missing) {
-        if (cancelled) break;
-        try {
-          const res = await fetch(`/api/ens-lookup?address=${addr}`);
-          const data = await res.json();
-          updates[addr] = data.ensName || null;
-          await new Promise(res => setTimeout(res, 100));
-        } catch {
-          updates[addr] = null;
-        }
+      try {
+        const res = await fetch('/api/ens-lookup-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses }),
+        });
+        const data = await res.json();
+        if (!cancelled && data.ensNames) setEnsNames(data.ensNames);
+      } catch {
+        // Optionally handle error
       }
-      if (!cancelled) setEnsNames((prev) => ({ ...prev, ...updates }));
     })();
     return () => { cancelled = true; };
-  }, [paginatedLions]);
+  }, [page, lions]);
 
   // ENS name resolution for visible addresses (Cubs)
-  const totalCubsPages = Math.ceil(cubs.length / PAGE_SIZE);
-  const paginatedCubs = cubs.slice((cubsPage - 1) * PAGE_SIZE, cubsPage * PAGE_SIZE);
   useEffect(() => {
-    const addresses = paginatedCubs.map((entry) => entry.address);
-    const missing = addresses.filter((addr) => cubsEnsNames[addr] === undefined);
-    if (missing.length === 0) return;
+    const addresses = cubs.map((entry) => entry.address);
+    if (addresses.length === 0) return;
     let cancelled = false;
     (async () => {
-      const updates: Record<string, string | null> = {};
-      for (const addr of missing) {
-        if (cancelled) break;
-        try {
-          const res = await fetch(`/api/ens-lookup?address=${addr}`);
-          const data = await res.json();
-          updates[addr] = data.ensName || null;
-          await new Promise(res => setTimeout(res, 100));
-        } catch {
-          updates[addr] = null;
-        }
+      try {
+        const res = await fetch('/api/ens-lookup-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses }),
+        });
+        const data = await res.json();
+        if (!cancelled && data.ensNames) setCubsEnsNames(data.ensNames);
+      } catch {
+        // Optionally handle error
       }
-      if (!cancelled) setCubsEnsNames((prev) => ({ ...prev, ...updates }));
     })();
     return () => { cancelled = true; };
-  }, [paginatedCubs]);
+  }, [cubs]);
+
+  // ENS name resolution for visible addresses (paginated Cubs)
+  useEffect(() => {
+    const addresses = cubs.slice((cubsPage - 1) * PAGE_SIZE, cubsPage * PAGE_SIZE).map((entry) => entry.address);
+    if (addresses.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/ens-lookup-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses }),
+        });
+        const data = await res.json();
+        if (!cancelled && data.ensNames) setCubsEnsNames(data.ensNames);
+      } catch {
+        // Optionally handle error
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [cubsPage, cubs]);
 
   // ENS name resolution for visible addresses (Token)
-  const totalTokenPages = Math.ceil(tokenTotalCount / TOKEN_PAGE_SIZE);
-  const paginatedTokenHolders = fullTokenHolders.slice((tokenPage - 1) * TOKEN_PAGE_SIZE, tokenPage * TOKEN_PAGE_SIZE);
   useEffect(() => {
-    const addresses = paginatedTokenHolders.map((entry) => entry.address);
-    const missing = addresses.filter((addr) => tokenEnsNames[addr] === undefined);
-    if (missing.length === 0) return;
+    const addresses = fullTokenHolders.map((entry) => entry.address);
+    if (addresses.length === 0) return;
     let cancelled = false;
     (async () => {
-      const updates: Record<string, string | null> = {};
-      for (const addr of missing) {
-        if (cancelled) break;
-        try {
-          const res = await fetch(`/api/ens-lookup?address=${addr}`);
-          const data = await res.json();
-          updates[addr] = data.ensName || null;
-          await new Promise(res => setTimeout(res, 100));
-        } catch {
-          updates[addr] = null;
-        }
+      try {
+        const res = await fetch('/api/ens-lookup-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses }),
+        });
+        const data = await res.json();
+        if (!cancelled && data.ensNames) setTokenEnsNames(data.ensNames);
+      } catch {
+        // Optionally handle error
       }
-      if (!cancelled) setTokenEnsNames((prev) => ({ ...prev, ...updates }));
     })();
     return () => { cancelled = true; };
-  }, [paginatedTokenHolders]);
+  }, [fullTokenHolders]);
 
   function handlePageChange(newPage: number) {
     if (newPage >= 1 && newPage <= totalPages) setPage(newPage);
@@ -423,7 +423,7 @@ export default function LeaderboardPage() {
     }
   }
 
-  const sortedTokenHolders = [...paginatedTokenHolders].sort((a, b) => {
+  const sortedTokenHolders = [...fullTokenHolders].sort((a, b) => {
     if (sortDirection === 'asc') {
       return a[sortKey] - b[sortKey];
     } else {
@@ -432,16 +432,16 @@ export default function LeaderboardPage() {
   });
 
   if (activeTab === "lazy") {
-    console.log("Token Holders Page Data:", paginatedTokenHolders);
+    console.log("Token Holders Page Data:", fullTokenHolders);
   }
 
-  // Convert paginatedLions and paginatedCubs to FullLeaderboardEntry[] for LeaderboardTable
-  const paginatedLionsFull: FullLeaderboardEntry[] = paginatedLions.map((entry) => ({
+  // Convert lions and cubs to FullLeaderboardEntry[] for LeaderboardTable
+  const paginatedLionsFull: FullLeaderboardEntry[] = lions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((entry) => ({
     ...entry,
     locked: 0,
     total: entry.count,
   }));
-  const paginatedCubsFull: FullLeaderboardEntry[] = paginatedCubs.map((entry) => ({
+  const paginatedCubsFull: FullLeaderboardEntry[] = cubs.slice((cubsPage - 1) * PAGE_SIZE, cubsPage * PAGE_SIZE).map((entry) => ({
     ...entry,
     locked: 0,
     total: entry.count,
@@ -474,6 +474,10 @@ export default function LeaderboardPage() {
     }
     return allHolders;
   }
+
+  const totalPages = Math.ceil(lions.length / PAGE_SIZE);
+  const totalCubsPages = Math.ceil(cubs.length / PAGE_SIZE);
+  const totalTokenPages = Math.ceil(fullTokenHolders.length / TOKEN_PAGE_SIZE);
 
   return (
     <div className="flex flex-col items-center w-full">
