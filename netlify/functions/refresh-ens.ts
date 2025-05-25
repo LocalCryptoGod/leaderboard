@@ -90,5 +90,5 @@ export const handler: Handler = async () => {
 };
 
 export const config = {
-  schedule: '50 20 * * *', // Every day at 20:50 UTC (3:50 PM EST)
+  schedule: '*/5 * * * *', // Every 5 minutes
 }; 
