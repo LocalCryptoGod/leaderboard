@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import LeaderboardTable from "../../components/LeaderboardTable";
-import { ethers } from "ethers";
 
 interface LeaderboardEntry {
   address: string;
@@ -124,7 +123,6 @@ export default function LeaderboardPage() {
 
   // ENS name resolution for visible addresses
   useEffect(() => {
-    const provider = new ethers.JsonRpcProvider("https://eth-mainnet.g.alchemy.com/v2/" + ALCHEMY_API_KEY);
     const addresses = lions.map((entry) => entry.address);
     const missing = addresses.filter((addr) => ensNames[addr] === undefined);
     if (missing.length === 0) return;
@@ -134,10 +132,10 @@ export default function LeaderboardPage() {
       for (const addr of missing) {
         if (cancelled) break;
         try {
-          const name = await provider.lookupAddress(addr);
-          console.log('ENS lookup:', addr, name); // Debug log
-          updates[addr] = name;
-          await new Promise(res => setTimeout(res, 1000)); // Delay to avoid rate limit
+          const res = await fetch(`/api/ens-lookup?address=${addr}`);
+          const data = await res.json();
+          updates[addr] = data.ensName || null;
+          await new Promise(res => setTimeout(res, 100)); // Short delay, Redis is fast
         } catch {
           updates[addr] = null;
         }
@@ -145,14 +143,13 @@ export default function LeaderboardPage() {
       if (!cancelled) setEnsNames((prev) => ({ ...prev, ...updates }));
     })();
     return () => { cancelled = true; };
-  }, [lions, ALCHEMY_API_KEY]);
+  }, [lions]);
 
   const totalPages = Math.ceil(lions.length / PAGE_SIZE);
   const paginatedLions = lions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // ENS name resolution for visible addresses
   useEffect(() => {
-    const provider = new ethers.JsonRpcProvider("https://eth-mainnet.g.alchemy.com/v2/" + ALCHEMY_API_KEY);
     const addresses = paginatedLions.map((entry) => entry.address);
     const missing = addresses.filter((addr) => ensNames[addr] === undefined);
     if (missing.length === 0) return;
@@ -162,10 +159,10 @@ export default function LeaderboardPage() {
       for (const addr of missing) {
         if (cancelled) break;
         try {
-          const name = await provider.lookupAddress(addr);
-          console.log('ENS lookup:', addr, name); // Debug log
-          updates[addr] = name;
-          await new Promise(res => setTimeout(res, 1000)); // Delay to avoid rate limit
+          const res = await fetch(`/api/ens-lookup?address=${addr}`);
+          const data = await res.json();
+          updates[addr] = data.ensName || null;
+          await new Promise(res => setTimeout(res, 100));
         } catch {
           updates[addr] = null;
         }
@@ -173,13 +170,12 @@ export default function LeaderboardPage() {
       if (!cancelled) setEnsNames((prev) => ({ ...prev, ...updates }));
     })();
     return () => { cancelled = true; };
-  }, [paginatedLions, ALCHEMY_API_KEY]);
+  }, [paginatedLions]);
 
   // ENS name resolution for visible addresses (Cubs)
   const totalCubsPages = Math.ceil(cubs.length / PAGE_SIZE);
   const paginatedCubs = cubs.slice((cubsPage - 1) * PAGE_SIZE, cubsPage * PAGE_SIZE);
   useEffect(() => {
-    const provider = new ethers.JsonRpcProvider("https://eth-mainnet.g.alchemy.com/v2/" + ALCHEMY_API_KEY);
     const addresses = paginatedCubs.map((entry) => entry.address);
     const missing = addresses.filter((addr) => cubsEnsNames[addr] === undefined);
     if (missing.length === 0) return;
@@ -189,10 +185,10 @@ export default function LeaderboardPage() {
       for (const addr of missing) {
         if (cancelled) break;
         try {
-          const name = await provider.lookupAddress(addr);
-          console.log('ENS lookup:', addr, name); // Debug log
-          updates[addr] = name;
-          await new Promise(res => setTimeout(res, 1000)); // Delay to avoid rate limit
+          const res = await fetch(`/api/ens-lookup?address=${addr}`);
+          const data = await res.json();
+          updates[addr] = data.ensName || null;
+          await new Promise(res => setTimeout(res, 100));
         } catch {
           updates[addr] = null;
         }
@@ -200,13 +196,12 @@ export default function LeaderboardPage() {
       if (!cancelled) setCubsEnsNames((prev) => ({ ...prev, ...updates }));
     })();
     return () => { cancelled = true; };
-  }, [paginatedCubs, ALCHEMY_API_KEY]);
+  }, [paginatedCubs]);
 
   // ENS name resolution for visible addresses (Token)
   const totalTokenPages = Math.ceil(tokenTotalCount / TOKEN_PAGE_SIZE);
   const paginatedTokenHolders = fullTokenHolders.slice((tokenPage - 1) * TOKEN_PAGE_SIZE, tokenPage * TOKEN_PAGE_SIZE);
   useEffect(() => {
-    const provider = new ethers.JsonRpcProvider("https://eth-mainnet.g.alchemy.com/v2/" + ALCHEMY_API_KEY);
     const addresses = paginatedTokenHolders.map((entry) => entry.address);
     const missing = addresses.filter((addr) => tokenEnsNames[addr] === undefined);
     if (missing.length === 0) return;
@@ -216,10 +211,10 @@ export default function LeaderboardPage() {
       for (const addr of missing) {
         if (cancelled) break;
         try {
-          const name = await provider.lookupAddress(addr);
-          console.log('ENS lookup:', addr, name); // Debug log
-          updates[addr] = name;
-          await new Promise(res => setTimeout(res, 1000)); // Delay to avoid rate limit
+          const res = await fetch(`/api/ens-lookup?address=${addr}`);
+          const data = await res.json();
+          updates[addr] = data.ensName || null;
+          await new Promise(res => setTimeout(res, 100));
         } catch {
           updates[addr] = null;
         }
@@ -227,7 +222,7 @@ export default function LeaderboardPage() {
       if (!cancelled) setTokenEnsNames((prev) => ({ ...prev, ...updates }));
     })();
     return () => { cancelled = true; };
-  }, [paginatedTokenHolders, ALCHEMY_API_KEY]);
+  }, [paginatedTokenHolders]);
 
   function handlePageChange(newPage: number) {
     if (newPage >= 1 && newPage <= totalPages) setPage(newPage);
