@@ -14,16 +14,25 @@ interface BatchRequestBody {
 }
 
 export async function POST(req: NextRequest) {
+  const logs: string[] = [];
   try {
     const body = (await req.json()) as BatchRequestBody;
+    logs.push(`[ENS-BATCH] Incoming body: ${JSON.stringify(body)}`);
     if (!Array.isArray(body.addresses)) {
-      return NextResponse.json({ error: 'addresses must be an array' }, { status: 400 });
+      logs.push(`[ENS-BATCH] addresses is not an array: ${body.addresses}`);
+      return NextResponse.json({ error: 'addresses must be an array', logs }, { status: 400 });
     }
     let results: { address: string; ens: string | null }[] = [];
     for (const address of body.addresses) {
       const key = `ens:${address.toLowerCase()}`;
-      const ens = await redis.get<string>(key);
-      results.push({ address, ens: ens ?? null });
+      try {
+        const ens = await redis.get<string>(key);
+        results.push({ address, ens: ens ?? null });
+        logs.push(`[ENS-BATCH] ${address} => ${ens ?? 'null'}`);
+      } catch (e) {
+        logs.push(`[ENS-BATCH] Redis error for address ${address}: ${String(e)}`);
+        results.push({ address, ens: null });
+      }
     }
     // Filtering
     if (body.filter) {
@@ -31,6 +40,7 @@ export async function POST(req: NextRequest) {
       results = results.filter(({ address, ens }) =>
         address.toLowerCase().includes(filter) || (ens && ens.toLowerCase().includes(filter))
       );
+      logs.push(`[ENS-BATCH] Filtered results with filter: ${body.filter}`);
     }
     // Sorting
     if (body.sortBy) {
@@ -40,14 +50,17 @@ export async function POST(req: NextRequest) {
         const bVal = body.sortBy === 'address' ? b.address : (b.ens || '');
         return aVal.localeCompare(bVal) * dir;
       });
+      logs.push(`[ENS-BATCH] Sorted results by: ${body.sortBy} (${body.sortDirection})`);
     }
     // Return as mapping for easy frontend use
     const ensNames: Record<string, string | null> = {};
     for (const { address, ens } of results) {
       ensNames[address] = ens;
     }
-    return NextResponse.json({ ensNames });
+    logs.push(`[ENS-BATCH] Returning ensNames for ${results.length} addresses`);
+    return NextResponse.json({ ensNames, logs });
   } catch (e) {
-    return NextResponse.json({ error: 'Failed to process batch ENS lookup', details: String(e) }, { status: 500 });
+    logs.push(`[ENS-BATCH] Error: ${String(e)}`);
+    return NextResponse.json({ error: 'Failed to process batch ENS lookup', details: String(e), logs }, { status: 500 });
   }
 } 

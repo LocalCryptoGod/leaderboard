@@ -132,6 +132,7 @@ export default function LeaderboardPage() {
           body: JSON.stringify({ addresses }),
         });
         const data = await res.json();
+        if (data.logs) data.logs.forEach((log: string) => console.log(log));
         if (!cancelled && data.ensNames) setEnsNames(data.ensNames);
       } catch {
         // Optionally handle error
@@ -153,6 +154,7 @@ export default function LeaderboardPage() {
           body: JSON.stringify({ addresses }),
         });
         const data = await res.json();
+        if (data.logs) data.logs.forEach((log: string) => console.log(log));
         if (!cancelled && data.ensNames) setEnsNames(data.ensNames);
       } catch {
         // Optionally handle error
@@ -174,6 +176,7 @@ export default function LeaderboardPage() {
           body: JSON.stringify({ addresses }),
         });
         const data = await res.json();
+        if (data.logs) data.logs.forEach((log: string) => console.log(log));
         if (!cancelled && data.ensNames) setCubsEnsNames(data.ensNames);
       } catch {
         // Optionally handle error
@@ -195,6 +198,7 @@ export default function LeaderboardPage() {
           body: JSON.stringify({ addresses }),
         });
         const data = await res.json();
+        if (data.logs) data.logs.forEach((log: string) => console.log(log));
         if (!cancelled && data.ensNames) setCubsEnsNames(data.ensNames);
       } catch {
         // Optionally handle error
@@ -216,6 +220,7 @@ export default function LeaderboardPage() {
           body: JSON.stringify({ addresses }),
         });
         const data = await res.json();
+        if (data.logs) data.logs.forEach((log: string) => console.log(log));
         if (!cancelled && data.ensNames) setTokenEnsNames(data.ensNames);
       } catch {
         // Optionally handle error
